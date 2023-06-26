@@ -370,14 +370,14 @@ def nueva_generacion(poblacion, n_padres, n_directos, dic):
 
 
 def algoritmo_genetico():
-    poblacion= poblacion_inicial()
+    poblacion = poblacion_inicial()
     dic = {}
     n_padres = round(TAMANO_POB * PROP_CRUCES)
-    n_padres = (n_padres if n_padres%2==0 else n_padres-1)
+    n_padres = (n_padres if n_padres % 2 == 0 else n_padres - 1)
     n_directos = TAMANO_POB - n_padres
     mejores = []
     for counter in range(ITERACIONES):
-        if counter%PASO_IMP == 0:
+        if counter % PASO_IMP == 0:
             print(counter)
             nuevo_dic = {}
             actual = 'inicial'
@@ -389,12 +389,12 @@ def algoritmo_genetico():
                     actual = ind
                     min = f_ind
             img_mejor = decodifica(actual).astype('uint8')
-            imageio.imwrite('ga_{:>08}.jpg'.format(counter//PASO_IMP),img_mejor)
+            imageio.imwrite('ga_{:>08}.jpg'.format(counter // PASO_IMP), img_mejor)
             mejores.append(min)
-            dic, poblacion = nueva_generacion(poblacion,n_padres,n_directos,dic)
+            dic, poblacion = nueva_generacion(poblacion, n_padres, n_directos, dic)
         else:
-            dic, poblacion = nueva_generacion(poblacion,n_padres,n_directos,dic)
-            print('.',end='')
+            dic, poblacion = nueva_generacion(poblacion, n_padres, n_directos, dic)
+            print('.', end='')
     return mejores
 
 
