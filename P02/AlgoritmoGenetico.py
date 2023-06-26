@@ -1,17 +1,15 @@
 """ Vamos a tratar de resolver los problemas de Algoritmo Genetico sin usar los notebooks"""
 
-# 1.- numpy para la representación matricial
-import numpy as np
-
 # 2.- random para poder tomar valores aleatorios
-import random, math
+import random
 
-# 3.- PIL e imageio para leer y escribir imágenes.
-from PIL import Image
 import imageio
-
 # Para dibujar
 import matplotlib as mpl
+# 1.- numpy para la representación matricial
+import numpy as np
+# 3.- PIL e imageio para leer y escribir imágenes.
+from PIL import Image
 from matplotlib import pyplot as plt
 
 mpl.rcParams['figure.figsize'] = (15, 10)  # Para el tamaño de la image
@@ -120,6 +118,8 @@ def genera_individuo_prof():
 
 individuo = genera_individuo()
 
+individuo_2 = genera_individuo()
+
 print(individuo)
 
 ## DECODIFICA ##
@@ -170,3 +170,232 @@ pob = poblacion_inicial()
 print(pob)
 
 ## FITNESS ##
+
+"""Para poder r los mejores inidividuos de la población, necesitamos definir una función fitness.
+    En este caso la función fitness se define como la suma de las diferencias (en valor absoluto) pixel a pixel 
+    entre la matriz que representa el individuo y la matriz que representa la imagen original."""
+
+
+def fitness(individuo):
+    # tenemos que sumar los valores de la diferencia entre la matriz decodificada (y generada), frente a  la original
+    return np.sum(np.absolute(decodifica(individuo) - IM2ARRAY))
+
+
+# print(fitness(matriz_individuo))
+
+## SELECCION POR TORNEO ##
+
+"""Define la función selecciona_uno_por_torneo(poblacion,dic) 
+    que tome como entrada una población de individuos y un diccionario de pares individuo:fitness 
+    y devuelva una tupla (seleccionado,nuevo_dic) donde seleccionado sea un individuo 
+    de la población seleccionado por torneo con NUM_PARTICIPANTES como el número de participantes en cada torneo 
+    y nuevo_dic sea el diccionario dic al que se le han añadido los pares 
+    individuo:fitness que se hayan calculado en la búsqueda de seleccionado."""
+
+
+def selecciona_uno_por_torneo(poblacion, dic):
+    # valor mínimo de tipo float
+    actual = 0
+    minimo = float('inf')
+    for _ in range(NUM_PARTICIPANTES):
+
+        participante = random.choice(poblacion)
+
+        fitness_participante = ()
+
+        if participante in dic:
+            fitness_participante = dic[participante]
+        else:
+            fitness_participante = fitness(participante)
+
+            dic[participante] = fitness_participante
+
+            if fitness_participante < minimo:
+                actual = participante
+
+                minimo = fitness_participante
+
+    return actual, dic
+
+
+# Solución que funciona y que seguiremos usando...
+def selecciona_uno_por_torneo_2(poblacion, dic):
+    # Sacamos un valor infinito para usarlo como referencia el que se le pase
+    minimo = float('inf')
+    # Bucle limitado al número de participantes que van a ser la poblacion del cromosoma
+    for _ in range(NUM_PARTICIPANTES):
+        # Elegimos un indice con valor aleatorio según la población que haya como parámetro de entrada
+        ind = random.choice(poblacion)
+        # Una vez que vemos que el índice está en el diccionario de entrada ...
+        if ind in dic:
+            # ... guardamos el valor del índice como fitness índice que ya estaría previamente calculado
+            f_ind = dic[ind]
+        # Si el índice no está en el diccionario de entrada
+        else:
+            # Usamos la variable f_ind para guardar el índice del fitness
+            f_ind = fitness(ind)
+            # Indicamos que el valor del diccionario que apunta al índice el el fitness del índice
+            dic[ind] = f_ind
+            # Si el fitness del índice es menor que el mínimo actual...
+            if f_ind < minimo:
+                # El índice pasa a ser el fitness actual guardado en la variable actual ...
+                actual = ind
+                # Así cómo el mínimo pasa a ser el fitness del índice que hay ahora mismo en este individuo de la población
+                minimo = f_ind
+    # La tupla se va a generar automáticamente una vez le pasemos los parámetros
+    return actual, dic
+
+
+print(selecciona_uno_por_torneo_2(poblacion_inicial(), {}))
+
+""" Define la función seleccion_por_torneo(poblacion,num_seleccionados,dic) que además de la población 
+    y el diccionario del ejercicio anterior tomemos el número de individuos que queremos seleccionar.
+    La salida debe ser una tupla (seleccion,nuevo_dic) donde nuevo_dic es el diccionario actualizado 
+    y selecciona una lista de individuos seleccionados. """
+
+
+def seleccion_por_torneo(poblacion, num_seleccionados, dic):
+    seleccion = []
+    for _ in range(num_seleccionados):
+        sel, nuevo_dic = selecciona_uno_por_torneo_2(poblacion, dic)
+
+        seleccion.append(sel)
+        dic = nuevo_dic
+    return seleccion, dic
+
+
+# 4 es el numero de seleccionados que queremos
+# print(poblacion_inicial(), 4, {})
+
+## CRUCE ##
+
+""" Define la función cruza(i1,i2) que tome dos individuos y 
+    devuelva una lista con los dos hijos obtenidos mediante la técnica de cruce en un punto"""
+
+
+def cruza(individuo_1, individuo_2):
+    punto_cruce = random.randrange(1, NUMERO_DE_GENES - 1)
+
+    individuo_cruzado_1 = individuo_1[punto_cruce:] + individuo_2[:punto_cruce]
+
+    individuo_cruzado_2 = individuo_1[:punto_cruce] + individuo_2[punto_cruce:]
+
+    res = [individuo_cruzado_1, individuo_cruzado_2]
+
+    return res
+
+
+# Cruce de padres
+
+def cruza_padres(padres):
+    hijos = []
+    """Este for con 3 valores (x,y,z) indica que x es el valor de inicio del bucle, es decir i=0, que y es el límite o cortocircuito del bucle
+        y z es el valor incremental del valor iterador i. Sería como un for extendido en java
+        for(i=0;i<hijos().size();i+2)
+
+        Todo ello, porque nos dice que los hijos lo crean un PAR de padres, con lo cual se escogen los padres de 2 en 2 pero sin repetirse"""
+    for i in range(0, len(padres), 2):
+        hijos.extend(cruza(*padres[i:i + 2]))
+        """Para empezar tenemos que *function hace que saquemos los individuos de la lista según lo que marquemos como límite
+            En el caso de nuestro problema como ya hemos marcado vamos por pares, por ello vamos de padres[i:i+2] ya que 
+            el intervalo para escoger los valores es [i, i+2) por la definición de array en python"""
+
+    return hijos
+
+
+# print(cruza(individuo, individuo_2))
+
+
+## MUTACION ##
+
+# Mutacion de individuo
+
+""" Define la función muta(ind) que reciba como entrada un individuo ind y que, 
+    con una probabilidad PROB_MUTACION cambie uno de sus genes por otro gen aleatorio."""
+
+
+def muta(individuo_mutante):
+    mutar = random.random() < PROB_MUTACION
+    if mutar:
+        # Mutamos un individuo...
+        i = random.randrange(NUMERO_DE_GENES)
+        # añadiendo un gen al azar
+        return individuo_mutante[i] + genera_gen() + individuo_mutante[i + 1:]
+    else:
+        return individuo_mutante
+
+
+# Mutacion de poblacion
+
+""" Define una función muta_individuos(poblacion) que reciba como entrada a lista de individuos poblacion 
+    y aplique la función muta a cada uno de los individuos"""
+
+
+def muta_individuos(poblacion_mutante):
+    res = []
+    for individuo in poblacion_mutante:
+        mutante = muta(individuo)
+        res.append(mutante)
+
+    return res
+
+
+"""Define una función nueva_generacion(poblacion,n_padres,n_directos,dic) que reciba como entrada:
+
+    poblacion es una población de individuos
+    n_padres es un número que determina cuántos individuos seleccionamos por torneo para ser padres
+    n_directos es un número que determina cuántos individuos seleccionamos por torneo para 
+    pasar directamente a la siguiente generación.
+    dic es un diccionario de pares individuo:fitness
+    
+    La función debe seleccionar un conjunto de individuos para ser padres y otro para pasar directamente 
+    a la siguiente generación y a partir de los padres se debe genera un conjunto de hijos por cruce. 
+    La función debe devolver una tupla (nuevo_dic,nueva_pob) donde nueva_pob es una lista de individuos formada por 
+    los individuos que han pasado directamente a la siguiente generación más el resultado 
+    de aplicar la función de mutación a los hijos."""
+
+
+def nueva_generacion(poblacion, n_padres, n_directos, dic):
+    # Sacamos los padres que usaremos para cruzar la siguiente generacion y el fitness que usaremos para la generacion directa
+    padres, fitness_torneo_1 = seleccion_por_torneo(poblacion, n_padres, dic)
+    # Cruzamos los padres para tener unos hijos mutados con cruce
+    generacion_cruce = cruza_padres(padres)
+    # Generamos la generación que pasará directa por torneo usando el fitness del primer torneo
+    generacion_directa, fitness_torneo_2 = seleccion_por_torneo(poblacion, n_directos, fitness_torneo_1)
+    # Creamos la nueva población
+    nueva_pob = generacion_directa + muta_individuos(generacion_cruce)
+    # Creamos la variables nuevo_dic únicamente para seguir la nomenclatura
+    nuevo_dic = fitness_torneo_2
+    return nuevo_dic, nueva_pob
+
+
+def algoritmo_genetico():
+    poblacion= poblacion_inicial()
+    dic = {}
+    n_padres = round(TAMANO_POB * PROP_CRUCES)
+    n_padres = (n_padres if n_padres%2==0 else n_padres-1)
+    n_directos = TAMANO_POB - n_padres
+    mejores = []
+    for counter in range(ITERACIONES):
+        if counter%PASO_IMP == 0:
+            print(counter)
+            nuevo_dic = {}
+            actual = 'inicial'
+            min = float('inf')
+            for ind in poblacion:
+                f_ind = fitness(ind)
+                nuevo_dic[ind] = f_ind
+                if f_ind < min:
+                    actual = ind
+                    min = f_ind
+            img_mejor = decodifica(actual).astype('uint8')
+            imageio.imwrite('ga_{:>08}.jpg'.format(counter//PASO_IMP),img_mejor)
+            mejores.append(min)
+            dic, poblacion = nueva_generacion(poblacion,n_padres,n_directos,dic)
+        else:
+            dic, poblacion = nueva_generacion(poblacion,n_padres,n_directos,dic)
+            print('.',end='')
+    return mejores
+
+
+sal_ag = algoritmo_genetico()
